@@ -186,6 +186,7 @@ modules = [
     "oauth",
     "test",
     "ytdl",
+    "zbporn",
     "generic",
 ]
 
