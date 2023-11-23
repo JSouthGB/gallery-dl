@@ -6,69 +6,40 @@
 
 """Extractors for https://x3vid.com/"""
 
-from .common import Extractor, Message
+from .common import GalleryExtractor, Message
 from .. import text
 
 BASE_PATTERN = r"(?:https?://)?x3vid\.com"
 
 
-class X3vidGalleryExtractor(Extractor):
+class X3vidGalleryExtractor(GalleryExtractor):
     category = 'x3vid'
-    subcategory = 'gallery'
     root = 'https://x3vid.com'
     directory_fmt = ('{category}', '{title}')
-    filename_fmt = '{filename}.{extension}'
-    archive_fmt = '{gallery_id}_{img_id}_{filename}'
-    pattern = BASE_PATTERN + r"/gallery/(\d+)"
+    pattern = (
+        BASE_PATTERN + r"/(?:gallery|gallery_pics)/(\d+)/([a-zA-Z0-9_#%]+)")
     example = 'https://x3vid.com/album-title-5-pics/'
 
-    def items(self):
-        page_list = [self.url]
-        thumb_list = []
-        page_src = self.request(
-            text.ensure_http_scheme(self.url)).text
+    def __init__(self, match):
+        self.gallery_id = match.group(1)
+        self.title = text.unquote(match.group(2))
+        url = '{}/gallery_pics/{}/{}'.format(
+            self.root, self.gallery_id, self.title)
+        GalleryExtractor.__init__(self, match, url)
 
-        pagination_src = text.extr(
-            page_src, '"pagination"', '"next_page"')
-        page_links = (
-            text.extract_iter(pagination_src, 'href="', '">'))
-
-        for page in page_links:
-            page = f'{self.root}{page}'
-            page_list.append(page)
-
-        for page in page_list:
-            page = self.request(page).text
-            thumb_src = text.extract_iter(
-                page, 'class="thumb-img">', '</a>')
-            for _ in thumb_src:
-                thumb_list.append(_)
-
-        data = self.metadata(page_src)
-        data['count'] = len(thumb_list)
-        yield Message.Directory, data
-
-        for num, image in enumerate(thumb_list, 1):
-            rel_image = text.extr(image, 'url(/thumbs', ')"></div>')
-            image_link = f'{self.root}/images{rel_image}'
-            name, _, ext = image_link.rpartition(".")
-            img = {
-                'img_id': text.extr(image, '<img id="', '"'),
-                'num': num,
-                'tags': data['tags'],
-                'title': data['title'],
-                'count': data['count'],
-                'filename': name,
-                'extension': ext,
-            }
-            yield Message.Url, image_link, img
+    def images(self, page):
+        url = '{}/images{{}}'.format(self.root).format
+        images = text.extract_iter(page, '"/images', '"')
+        return [
+            (url(i), None)
+            for i in images
+        ]
 
     def metadata(self, page):
-        tag_src = text.extr(page, 'Category:', '</div>')
-        data = {
+        extr = text.extract_from(page)
+        return {
             'pageurl': text.unquote(self.url),
-            'gallery_id': self.url.split('/')[4],
-            'title': text.extr(page, '<title>', '/title>').split(' - ')[0],
-            'tags': list(text.extract_iter(tag_src, '">', '</a>'))
+            'gallery_id': self.gallery_id,
+            'title': self.title,
+            'tags': text.split_html(extr('Category:', '</div>')),
         }
-        return data
