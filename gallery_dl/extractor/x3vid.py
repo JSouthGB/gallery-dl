@@ -18,7 +18,7 @@ class X3vidGalleryExtractor(GalleryExtractor):
     directory_fmt = ('{category}', '{title}')
     pattern = (
         BASE_PATTERN + r"/(?:gallery|gallery_pics)/(\d+)/([a-zA-Z0-9_#%]+)")
-    example = 'https://x3vid.com/album-title-5-pics/'
+    example = 'https://x3vid.com/gallery/12345678/album-title-5-pics/'
 
     def __init__(self, match):
         self.gallery_id = match.group(1)
@@ -27,13 +27,24 @@ class X3vidGalleryExtractor(GalleryExtractor):
             self.root, self.gallery_id, self.title)
         GalleryExtractor.__init__(self, match, url)
 
+# TODO - MULTIPLE PAGES NOT YET SUPPORTED/WORKING
+    def pagination(self, page):
+        pnum = []
+        pages = text.remove_html(text.extr(
+            page, '="current">', '<a class="next'))
+        return [i for i in pages if i != ' ']
+
     def images(self, page):
         url = '{}/images{{}}'.format(self.root).format
-        images = text.extract_iter(page, '"/images', '"')
-        return [
-            (url(i), None)
-            for i in images
-        ]
+        for x in self.pagination(page):
+            page = self.request('{}?page={}'.format(self.url, x)).text
+            print('{}?page={}'.format(self.url, x))
+            print(x)
+            images = text.extract_iter(page, '"/images', '"')
+            return [
+                (url(i), None)
+                for i in images
+            ]
 
     def metadata(self, page):
         extr = text.extract_from(page)
