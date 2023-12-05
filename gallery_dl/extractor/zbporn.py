@@ -9,16 +9,14 @@
 from .common import GalleryExtractor
 from .. import text
 
-BASE_PATTERN = r"(?:https?://)?(?:www\.)?zbporn\.com"
-
 
 class ZbpornGalleryExtractor(GalleryExtractor):
-    category = 'zbporn'
-    directory_fmt = ('{category}', '{title}')
+    category = "zbporn"
+    directory_fmt = ("{category}", "{title}")
     pattern = (r"(?:https?://)?(?:www\.)?zbporn\.com"
                r"/albums/(\d+)/([a-zA-Z0-9\-_#%]+)")
-    root = 'https://zbporn.com'
-    example = 'https://zbporn.com/albums/123456/title-of-album/'
+    root = "https://zbporn.com"
+    example = "https://zbporn.com/albums/123456/title-of-album/"
 
     def __init__(self, match):
         self.gallery_id = match.group(1)
