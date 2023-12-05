@@ -40,6 +40,7 @@ class ExhentaiExtractor(Extractor):
         if domain == "auto":
             domain = ("ex" if self.version == "ex" else "e-") + "hentai.org"
         self.root = "https://" + domain
+        self.api_url = self.root + "/api.php"
         self.cookies_domain = "." + domain
 
         Extractor.initialize(self)
@@ -120,7 +121,6 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
         self.key_start = None
         self.key_show = None
         self.key_next = None
-        self.api_url = ""
         self.count = 0
 
     def _init(self):
@@ -171,6 +171,21 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
             # declared inside 'items()' to be able to access 'data'
             if not response.history and response.headers.get(
                     "content-type", "").startswith("text/html"):
+                page = response.text
+                self.log.warning("'%s'", page)
+
+                if " requires GP" in page:
+                    gp = self.config("gp")
+                    if gp == "stop":
+                        raise exception.StopExtraction("Not enough GP")
+                    elif gp == "wait":
+                        input("Press ENTER to continue.")
+                        return response.url
+
+                    self.log.info("Falling back to non-original downloads")
+                    self.original = False
+                    return data["_url_1280"]
+
                 self._report_limits(data)
             return True
 
@@ -212,7 +227,10 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
 
     def metadata_from_page(self, page):
         extr = text.extract_from(page)
-        self.api_url = extr('var api_url = "', '"') or (self.root + "/api.php")
+
+        api_url = extr('var api_url = "', '"')
+        if api_url:
+            self.api_url = api_url
 
         data = {
             "gid"          : self.gallery_id,
@@ -296,6 +314,7 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
 
         data["num"] = self.image_num
         data["image_token"] = self.key_start = extr('var startkey="', '";')
+        data["_url_1280"] = iurl
         self.key_show = extr('var showkey="', '";')
 
         self._check_509(iurl, data)
@@ -345,6 +364,7 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
 
             data["num"] = request["page"]
             data["image_token"] = imgkey
+            data["_url_1280"] = imgurl
 
             self._check_509(imgurl, data)
             yield url, text.nameext_from_url(url, data)

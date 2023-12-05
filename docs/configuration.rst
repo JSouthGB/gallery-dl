@@ -166,6 +166,8 @@ Description
 
 extractor.*.parent-metadata
 ---------------------------
+extractor.*.metadata-parent
+---------------------------
 Type
     * ``bool``
     * ``string``
@@ -642,12 +644,12 @@ Description
     `format strings`_.
 
 
+extractor.*.metadata-url
+------------------------
 extractor.*.url-metadata
 ------------------------
 Type
     ``string``
-Default
-    ``null``
 Description
     Insert a file's download URL into its metadata dictionary as the given name.
 
@@ -658,12 +660,12 @@ Description
     with a ``metadata`` post processor, etc.
 
 
+extractor.*.metadata-path
+-------------------------
 extractor.*.path-metadata
 -------------------------
 Type
     ``string``
-Default
-    ``null``
 Description
     Insert a reference to the current
     `PathFormat <https://github.com/mikf/gallery-dl/blob/v1.24.2/gallery_dl/path.py#L27>`__
@@ -673,12 +675,24 @@ Description
     to access the current file's filename as ``"{gdl_path.filename}"``.
 
 
+extractor.*.metadata-extractor
+------------------------------
+extractor.*.extractor-metadata
+------------------------------
+Type
+    ``string``
+Description
+    Insert a reference to the current
+    `Extractor <https://github.com/mikf/gallery-dl/blob/v1.26.2/gallery_dl/extractor/common.py#L26>`__
+    object into metadata dictionaries as the given name.
+
+
+extractor.*.metadata-http
+-------------------------
 extractor.*.http-metadata
 -------------------------
 Type
     ``string``
-Default
-    ``null``
 Description
     Insert an ``object`` containing a file's HTTP headers and
     ``filename``, ``extension``, and ``date`` parsed from them
@@ -689,12 +703,12 @@ Description
     and its parsed form as ``"{gdl_http[date]}"``.
 
 
+extractor.*.metadata-version
+----------------------------
 extractor.*.version-metadata
 ----------------------------
 Type
     ``string``
-Default
-    ``null``
 Description
     Insert an ``object`` containing gallery-dl's version info into
     metadata dictionaries as the given name.
@@ -1108,6 +1122,19 @@ Description
 
     This value must be divisble by 16 and gets rounded down otherwise.
     The maximum possible value appears to be ``1920``.
+
+
+extractor.behance.modules
+-------------------------
+Type
+    ``list`` of ``strings``
+Default
+    ``["image", "video", "mediacollection", "embed"]``
+Description
+    Selects which gallery modules to download from.
+
+    Supported module types are
+    ``image``, ``video``, ``mediacollection``, ``embed``, ``text``.
 
 
 extractor.blogger.videos
@@ -1539,6 +1566,20 @@ Description
 
     Note: This will remove any Favorite Notes when applied
     to already favorited galleries.
+
+
+extractor.exhentai.gp
+---------------------
+Type
+    ``string``
+Default
+    ``"resized"``
+Description
+    Selects how to handle "you do not have enough GP" errors.
+
+    * `"resized"`: Continue downloading `non-original <extractor.exhentai.original_>`__ images.
+    * `"stop"`: Stop the current extractor run.
+    * `"wait"`: Wait for user input before retrying the current image.
 
 
 extractor.exhentai.limits
@@ -2526,6 +2567,14 @@ Description
     Download from video pins.
 
 
+extractor.pixeldrain.api-key
+----------------------------
+Type
+    ``string``
+Description
+    Your account's `API key <https://pixeldrain.com/user/api_keys>`__
+
+
 extractor.pixiv.include
 -----------------------
 Type
@@ -3107,6 +3156,16 @@ Description
     to access 18+ content without `API Key <extractor.twibooru.api-key_>`__.
 
     See `Filters <https://twibooru.org/filters>`__ for details.
+
+
+extractor.twitter.ads
+---------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Fetch media from promoted Tweets.
 
 
 extractor.twitter.cards
