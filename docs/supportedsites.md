@@ -986,6 +986,12 @@ Consider all sites to be NSFW unless otherwise known.
     <td></td>
 </tr>
 <tr>
+    <td>Zbporn</td>
+    <td>https://zbporn.com/</td>
+    <td>Galleries</td>
+    <td>Supported</td>
+</tr>
+<tr>
     <td>Zerochan</td>
     <td>https://www.zerochan.net/</td>
     <td>individual Images, Tag Searches</td>
