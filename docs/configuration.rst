@@ -166,6 +166,8 @@ Description
 
 extractor.*.parent-metadata
 ---------------------------
+extractor.*.metadata-parent
+---------------------------
 Type
     * ``bool``
     * ``string``
@@ -377,7 +379,7 @@ Description
     The username and password to use when attempting to log in to
     another site.
 
-    Specifying a username and password is required for
+    Specifying username and password is required for
 
     * ``nijie``
 
@@ -412,6 +414,10 @@ Description
 
     (*) The password value for these sites should be
     the API key found in your user profile, not the actual account password.
+
+    Note: Leave the ``password`` value empty or undefined
+    to get prompted for a passeword when performing a login
+    (see `getpass() <https://docs.python.org/3/library/getpass.html#getpass.getpass>`__).
 
 
 extractor.*.netrc
@@ -642,12 +648,12 @@ Description
     `format strings`_.
 
 
+extractor.*.metadata-url
+------------------------
 extractor.*.url-metadata
 ------------------------
 Type
     ``string``
-Default
-    ``null``
 Description
     Insert a file's download URL into its metadata dictionary as the given name.
 
@@ -658,12 +664,12 @@ Description
     with a ``metadata`` post processor, etc.
 
 
+extractor.*.metadata-path
+-------------------------
 extractor.*.path-metadata
 -------------------------
 Type
     ``string``
-Default
-    ``null``
 Description
     Insert a reference to the current
     `PathFormat <https://github.com/mikf/gallery-dl/blob/v1.24.2/gallery_dl/path.py#L27>`__
@@ -673,12 +679,24 @@ Description
     to access the current file's filename as ``"{gdl_path.filename}"``.
 
 
+extractor.*.metadata-extractor
+------------------------------
+extractor.*.extractor-metadata
+------------------------------
+Type
+    ``string``
+Description
+    Insert a reference to the current
+    `Extractor <https://github.com/mikf/gallery-dl/blob/v1.26.2/gallery_dl/extractor/common.py#L26>`__
+    object into metadata dictionaries as the given name.
+
+
+extractor.*.metadata-http
+-------------------------
 extractor.*.http-metadata
 -------------------------
 Type
     ``string``
-Default
-    ``null``
 Description
     Insert an ``object`` containing a file's HTTP headers and
     ``filename``, ``extension``, and ``date`` parsed from them
@@ -689,12 +707,12 @@ Description
     and its parsed form as ``"{gdl_http[date]}"``.
 
 
+extractor.*.metadata-version
+----------------------------
 extractor.*.version-metadata
 ----------------------------
 Type
     ``string``
-Default
-    ``null``
 Description
     Insert an ``object`` containing gallery-dl's version info into
     metadata dictionaries as the given name.
@@ -1538,6 +1556,17 @@ Description
     * ``"exhentai.org"``: Use ``exhentai.org`` for all URLs
 
 
+extractor.exhentai.fallback-retries
+-----------------------------------
+Type
+    ``integer``
+Default
+    ``2``
+Description
+    Number of times a failed image gets retried.
+    Use ``-1`` for infinite retries
+
+
 extractor.exhentai.fav
 ----------------------
 Type
@@ -1552,6 +1581,20 @@ Description
 
     Note: This will remove any Favorite Notes when applied
     to already favorited galleries.
+
+
+extractor.exhentai.gp
+---------------------
+Type
+    ``string``
+Default
+    ``"resized"``
+Description
+    Selects how to handle "you do not have enough GP" errors.
+
+    * `"resized"`: Continue downloading `non-original <extractor.exhentai.original_>`__ images.
+    * `"stop"`: Stop the current extractor run.
+    * `"wait"`: Wait for user input before retrying the current image.
 
 
 extractor.exhentai.limits
@@ -2537,6 +2580,14 @@ Default
     ``true``
 Description
     Download from video pins.
+
+
+extractor.pixeldrain.api-key
+----------------------------
+Type
+    ``string``
+Description
+    Your account's `API key <https://pixeldrain.com/user/api_keys>`__
 
 
 extractor.pixiv.include
@@ -4366,6 +4417,24 @@ Description
     File to write external URLs unsupported by *gallery-dl* to.
 
     The default format string here is ``"{message}"``.
+
+
+output.errorfile
+----------------
+Type
+    * |Path|_
+    * |Logging Configuration|_
+Description
+    File to write input URLs which returned an error to.
+
+    The default format string here is also ``"{message}"``.
+
+    When combined with
+    ``-I``/``--input-file-comment`` or
+    ``-x``/``--input-file-delete``,
+    this option will cause *all* input URLs from these files
+    to be commented/deleted after processing them
+    and not just successful ones.
 
 
 output.num-to-str

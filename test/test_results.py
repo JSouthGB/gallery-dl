@@ -192,22 +192,22 @@ class TestExtractorResults(unittest.TestCase):
                         subtest = True
                         self._test_kwdict(value[idx], item)
                 if not subtest:
-                    self.assertEqual(value, test, msg=key)
+                    self.assertEqual(test, value, msg=key)
             elif isinstance(test, str):
                 if test.startswith("re:"):
                     self.assertRegex(value, test[3:], msg=key)
                 elif test.startswith("dt:"):
                     self.assertIsInstance(value, datetime.datetime, msg=key)
-                    self.assertEqual(str(value), test[3:], msg=key)
+                    self.assertEqual(test[3:], str(value), msg=key)
                 elif test.startswith("type:"):
-                    self.assertEqual(type(value).__name__, test[5:], msg=key)
+                    self.assertEqual(test[5:], type(value).__name__, msg=key)
                 elif test.startswith("len:"):
                     self.assertIsInstance(value, (list, tuple), msg=key)
-                    self.assertEqual(len(value), int(test[4:]), msg=key)
+                    self.assertEqual(int(test[4:]), len(value), msg=key)
                 else:
-                    self.assertEqual(value, test, msg=key)
+                    self.assertEqual(test, value, msg=key)
             else:
-                self.assertEqual(value, test, msg=key)
+                self.assertEqual(test, value, msg=key)
 
 
 class ResultJob(job.DownloadJob):
@@ -405,7 +405,17 @@ def generate_tests():
     def _generate_method(result):
         def test(self):
             print("\n" + result["#url"])
-            self._run_test(result)
+            try:
+                self._run_test(result)
+            except KeyboardInterrupt as exc:
+                v = input("\n[e]xit | [f]ail | [S]kip ? ").strip().lower()
+                if v in ("e", "exit"):
+                    raise
+                if v in ("f", "fail"):
+                    self.fail("manual test failure")
+                else:
+                    self._skipped.append((result["#url"], exc))
+                    self.skipTest(exc)
         return test
 
     # enable selective testing for direct calls
