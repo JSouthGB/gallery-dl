@@ -115,6 +115,7 @@ def main():
         output.configure_logging(args.loglevel)
         if args.loglevel >= logging.ERROR:
             config.set(("output",), "mode", "null")
+            config.set(("downloader",), "progress", None)
         elif args.loglevel <= logging.DEBUG:
             import platform
             import requests
@@ -225,18 +226,26 @@ def main():
             else:
                 jobtype = args.jobtype or job.DownloadJob
 
+            input_manager = InputManager()
+            input_manager.log = input_log = logging.getLogger("inputfile")
+
             # unsupported file logging handler
             handler = output.setup_logging_handler(
                 "unsupportedfile", fmt="{message}")
             if handler:
-                ulog = logging.getLogger("unsupported")
+                ulog = job.Job.ulog = logging.getLogger("unsupported")
                 ulog.addHandler(handler)
                 ulog.propagate = False
-                job.Job.ulog = ulog
+
+            # error file logging handler
+            handler = output.setup_logging_handler(
+                "errorfile", fmt="{message}", mode="a")
+            if handler:
+                elog = input_manager.err = logging.getLogger("errorfile")
+                elog.addHandler(handler)
+                elog.propagate = False
 
             # collect input URLs
-            input_manager = InputManager()
-            input_manager.log = input_log = logging.getLogger("inputfile")
             input_manager.add_list(args.urls)
 
             if args.input_files:
@@ -269,6 +278,7 @@ def main():
 
                     if status:
                         retval |= status
+                        input_manager.error()
                     else:
                         input_manager.success()
 
@@ -280,6 +290,7 @@ def main():
                 except exception.NoExtractorError:
                     log.error("Unsupported URL '%s'", url)
                     retval |= 64
+                    input_manager.error()
 
                 input_manager.next()
             return retval
@@ -300,8 +311,11 @@ class InputManager():
     def __init__(self):
         self.urls = []
         self.files = ()
+        self.log = self.err = None
+
+        self._url = ""
+        self._item = None
         self._index = 0
-        self._current = None
         self._pformat = None
 
     def add_url(self, url):
@@ -438,17 +452,33 @@ class InputManager():
         self._index += 1
 
     def success(self):
-        if self._current:
-            url, path, action, indicies = self._current
-            lines = self.files[path]
-            action(lines, indicies)
-            try:
-                with open(path, "w", encoding="utf-8") as fp:
-                    fp.writelines(lines)
-            except Exception as exc:
-                self.log.warning(
-                    "Unable to update '%s' (%s: %s)",
-                    path, exc.__class__.__name__, exc)
+        if self._item:
+            self._rewrite()
+
+    def error(self):
+        if self.err:
+            if self._item:
+                url, path, action, indicies = self._item
+                lines = self.files[path]
+                out = "".join(lines[i] for i in indicies)
+                if out and out[-1] == "\n":
+                    out = out[:-1]
+                self._rewrite()
+            else:
+                out = str(self._url)
+            self.err.info(out)
+
+    def _rewrite(self):
+        url, path, action, indicies = self._item
+        lines = self.files[path]
+        action(lines, indicies)
+        try:
+            with open(path, "w", encoding="utf-8") as fp:
+                fp.writelines(lines)
+        except Exception as exc:
+            self.log.warning(
+                "Unable to update '%s' (%s: %s)",
+                path, exc.__class__.__name__, exc)
 
     @staticmethod
     def _action_comment(lines, indicies):
@@ -466,23 +496,24 @@ class InputManager():
 
     def __next__(self):
         try:
-            item = self.urls[self._index]
+            url = self.urls[self._index]
         except IndexError:
             raise StopIteration
 
-        if isinstance(item, tuple):
-            self._current = item
-            item = item[0]
+        if isinstance(url, tuple):
+            self._item = url
+            url = url[0]
         else:
-            self._current = None
+            self._item = None
+        self._url = url
 
         if self._pformat:
             output.stderr_write(self._pformat({
                 "total"  : len(self.urls),
                 "current": self._index + 1,
-                "url"    : item,
+                "url"    : url,
             }))
-        return item
+        return url
 
 
 class ExtendedUrl():

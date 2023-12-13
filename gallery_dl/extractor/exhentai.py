@@ -40,20 +40,13 @@ class ExhentaiExtractor(Extractor):
         if domain == "auto":
             domain = ("ex" if self.version == "ex" else "e-") + "hentai.org"
         self.root = "https://" + domain
+        self.api_url = self.root + "/api.php"
         self.cookies_domain = "." + domain
 
         Extractor.initialize(self)
 
         if self.version != "ex":
             self.cookies.set("nw", "1", domain=self.cookies_domain)
-        self.original = self.config("original", True)
-
-        limits = self.config("limits", False)
-        if limits and limits.__class__ is int:
-            self.limits = limits
-            self._remaining = 0
-        else:
-            self.limits = False
 
     def request(self, url, **kwargs):
         response = Extractor.request(self, url, **kwargs)
@@ -84,6 +77,7 @@ class ExhentaiExtractor(Extractor):
     @cache(maxage=90*24*3600, keyarg=1)
     def _login_impl(self, username, password):
         self.log.info("Logging in as %s", username)
+
         url = "https://forums.e-hentai.org/index.php?act=Login&CODE=01"
         headers = {
             "Referer": "https://e-hentai.org/bounce_login.php?b=d&bt=1-1",
@@ -97,10 +91,19 @@ class ExhentaiExtractor(Extractor):
             "ipb_login_submit": "Login!",
         }
 
+        self.cookies.clear()
+
         response = self.request(url, method="POST", headers=headers, data=data)
         if b"You are now logged in as:" not in response.content:
             raise exception.AuthenticationError()
-        return {c: response.cookies[c] for c in self.cookies_names}
+
+        # collect more cookies
+        url = self.root + "/favorites.php"
+        response = self.request(url)
+        if response.history:
+            self.request(url)
+
+        return self.cookies
 
 
 class ExhentaiGalleryExtractor(ExhentaiExtractor):
@@ -120,13 +123,22 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
         self.key_start = None
         self.key_show = None
         self.key_next = None
-        self.api_url = ""
         self.count = 0
 
     def _init(self):
         source = self.config("source")
         if source == "hitomi":
             self.items = self._items_hitomi
+
+        limits = self.config("limits", False)
+        if limits and limits.__class__ is int:
+            self.limits = limits
+            self._remaining = 0
+        else:
+            self.limits = False
+
+        self.fallback_retries = self.config("fallback-retries", 2)
+        self.original = self.config("original", True)
 
     def favorite(self, slot="0"):
         url = self.root + "/gallerypopups.php"
@@ -175,6 +187,13 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
                 self.log.warning("'%s'", page)
 
                 if " requires GP" in page:
+                    gp = self.config("gp")
+                    if gp == "stop":
+                        raise exception.StopExtraction("Not enough GP")
+                    elif gp == "wait":
+                        input("Press ENTER to continue.")
+                        return response.url
+
                     self.log.info("Falling back to non-original downloads")
                     self.original = False
                     return data["_url_1280"]
@@ -220,7 +239,10 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
 
     def metadata_from_page(self, page):
         extr = text.extract_from(page)
-        self.api_url = extr('var api_url = "', '"') or (self.root + "/api.php")
+
+        api_url = extr('var api_url = "', '"')
+        if api_url:
+            self.api_url = api_url
 
         data = {
             "gid"          : self.gallery_id,
@@ -291,12 +313,11 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
             if self.original and orig:
                 url = self.root + "/fullimg" + text.unescape(orig)
                 data = self._parse_original_info(extr('ownload original', '<'))
-                data["_fallback"] = ("{}?nl={}".format(url, nl),)
+                data["_fallback"] = self._fallback_original(nl, url)
             else:
                 url = iurl
                 data = self._parse_image_info(url)
-                data["_fallback"] = self._fallback(
-                    None, self.image_num, nl)
+                data["_fallback"] = self._fallback_1280(nl, self.image_num)
         except IndexError:
             self.log.debug("Page content:\n%s", page)
             raise exception.StopExtraction(
@@ -305,6 +326,7 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
         data["num"] = self.image_num
         data["image_token"] = self.key_start = extr('var startkey="', '";')
         data["_url_1280"] = iurl
+        data["_nl"] = nl
         self.key_show = extr('var showkey="', '";')
 
         self._check_509(iurl, data)
@@ -341,12 +363,12 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
                     url = text.unescape(origurl)
                     data = self._parse_original_info(text.extract(
                         i6, "ownload original", "<", pos)[0])
-                    data["_fallback"] = ("{}?nl={}".format(url, nl),)
+                    data["_fallback"] = self._fallback_original(nl, url)
                 else:
                     url = imgurl
                     data = self._parse_image_info(url)
-                    data["_fallback"] = self._fallback(
-                        imgkey, request["page"], nl)
+                    data["_fallback"] = self._fallback_1280(
+                        nl, request["page"], imgkey)
             except IndexError:
                 self.log.debug("Page content:\n%s", page)
                 raise exception.StopExtraction(
@@ -355,6 +377,7 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
             data["num"] = request["page"]
             data["image_token"] = imgkey
             data["_url_1280"] = imgurl
+            data["_nl"] = nl
 
             self._check_509(imgurl, data)
             yield url, text.nameext_from_url(url, data)
@@ -421,13 +444,26 @@ class ExhentaiGalleryExtractor(ExhentaiExtractor):
             raise exception.NotFoundError("image page")
         return page
 
-    def _fallback(self, imgkey, num, nl):
-        url = "{}/s/{}/{}-{}?nl={}".format(
-            self.root, imgkey or self.key_start, self.gallery_id, num, nl)
-        page = self.request(url, fatal=False).text
-        if page.startswith(("Invalid page", "Keep trying")):
-            return
-        yield self.image_from_page(page)[0]
+    def _fallback_original(self, nl, fullimg):
+        url = "{}?nl={}".format(fullimg, nl)
+        for _ in util.repeat(self.fallback_retries):
+            yield url
+
+    def _fallback_1280(self, nl, num, token=None):
+        if not token:
+            token = self.key_start
+
+        for _ in util.repeat(self.fallback_retries):
+            url = "{}/s/{}/{}-{}?nl={}".format(
+                self.root, token, self.gallery_id, num, nl)
+
+            page = self.request(url, fatal=False).text
+            if page.startswith(("Invalid page", "Keep trying")):
+                return
+            url, data = self.image_from_page(page)
+            yield url
+
+            nl = data["_nl"]
 
     @staticmethod
     def _parse_image_info(url):

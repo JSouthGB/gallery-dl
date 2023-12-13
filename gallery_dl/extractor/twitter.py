@@ -1276,8 +1276,21 @@ class TwitterAPI():
                 self.headers["x-csrf-token"] = csrf_token
 
             if response.status_code < 400:
-                # success
-                return response.json()
+                data = response.json()
+                if not data.get("errors") or not any(
+                        (e.get("message") or "").lower().startswith("timeout")
+                        for e in data["errors"]):
+                    return data  # success or non-timeout errors
+
+                msg = data["errors"][0].get("message") or "Unspecified"
+                self.extractor.log.debug("Internal Twitter error: '%s'", msg)
+
+                if self.headers["x-twitter-auth-type"]:
+                    self.extractor.log.debug("Retrying API request")
+                    continue  # retry
+
+                # fall through to "Login Required"
+                response.status_code = 404
 
             if response.status_code == 429:
                 # rate limit exceeded
@@ -1289,11 +1302,9 @@ class TwitterAPI():
                 self.extractor.wait(until=until, seconds=seconds)
                 continue
 
-            if response.status_code == 403 and \
-                    not self.headers["x-twitter-auth-type"] and \
-                    endpoint == "/2/search/adaptive.json":
-                raise exception.AuthorizationError(
-                    "Login required to access search results")
+            if response.status_code in (403, 404) and \
+                    not self.headers["x-twitter-auth-type"]:
+                raise exception.AuthorizationError("Login required")
 
             # error
             try:
@@ -1431,7 +1442,12 @@ class TwitterAPI():
                 for instr in instructions:
                     instr_type = instr.get("type")
                     if instr_type == "TimelineAddEntries":
-                        entries = instr["entries"]
+                        if entries:
+                            entries.extend(instr["entries"])
+                        else:
+                            entries = instr["entries"]
+                    elif instr_type == "TimelineAddToModule":
+                        entries = instr["moduleItems"]
                     elif instr_type == "TimelineReplaceEntry":
                         entry = instr["entry"]
                         if entry["entryId"].startswith("cursor-bottom-"):
@@ -1479,6 +1495,11 @@ class TwitterAPI():
 
                 if esw("tweet-"):
                     tweets.append(entry)
+                elif esw("profile-grid-"):
+                    if "content" in entry:
+                        tweets.extend(entry["content"]["items"])
+                    else:
+                        tweets.append(entry)
                 elif esw(("homeConversation-",
                           "profile-conversation-",
                           "conversationthread-")):

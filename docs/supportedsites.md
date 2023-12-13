@@ -110,12 +110,6 @@ Consider all sites to be NSFW unless otherwise known.
     <td></td>
 </tr>
 <tr>
-    <td>Blogger</td>
-    <td>https://www.blogger.com/</td>
-    <td>Blogs, Labels, Posts, Search Results</td>
-    <td></td>
-</tr>
-<tr>
     <td>Bunkr</td>
     <td>https://bunkrr.su/</td>
     <td>Albums, Media Files</td>
@@ -644,6 +638,12 @@ Consider all sites to be NSFW unless otherwise known.
     <td><a href="https://github.com/mikf/gallery-dl#cookies">Cookies</a></td>
 </tr>
 <tr>
+    <td>pixeldrain</td>
+    <td>https://pixeldrain.com/</td>
+    <td>Albums, Files</td>
+    <td></td>
+</tr>
+<tr>
     <td>Pixhost</td>
     <td>https://pixhost.to/</td>
     <td>Galleries, individual Images</td>
@@ -830,6 +830,12 @@ Consider all sites to be NSFW unless otherwise known.
     <td></td>
 </tr>
 <tr>
+    <td>TMOHentai</td>
+    <td>https://tmohentai.com/</td>
+    <td>Galleries</td>
+    <td></td>
+</tr>
+<tr>
     <td>Toyhouse</td>
     <td>https://toyhou.se/</td>
     <td>Art, individual Images</td>
@@ -881,6 +887,12 @@ Consider all sites to be NSFW unless otherwise known.
     <td>Uploadir</td>
     <td>https://uploadir.com/</td>
     <td>Files</td>
+    <td></td>
+</tr>
+<tr>
+    <td>Urlgalleries</td>
+    <td>https://urlgalleries.net/</td>
+    <td>Galleries</td>
     <td></td>
 </tr>
 <tr>
@@ -995,6 +1007,22 @@ Consider all sites to be NSFW unless otherwise known.
     <td>もえぴりあ</td>
     <td>https://vanilla-rock.com/</td>
     <td>Posts, Tag Searches</td>
+    <td></td>
+</tr>
+
+<tr>
+    <td colspan="4"><strong>Blogger Instances</strong></td>
+</tr>
+<tr>
+    <td>Blogspot</td>
+    <td>https://www.blogger.com/</td>
+    <td>Blogs, Labels, Posts, Search Results</td>
+    <td></td>
+</tr>
+<tr>
+    <td>MIC MIC IDOL</td>
+    <td>https://www.micmicidol.club/</td>
+    <td>Blogs, Labels, Posts, Search Results</td>
     <td></td>
 </tr>
 
@@ -1481,16 +1509,6 @@ Consider all sites to be NSFW unless otherwise known.
     <td>The /b/ Archive</td>
     <td>https://thebarchive.com/</td>
     <td>Boards, Galleries, Search Results, Threads</td>
-    <td></td>
-</tr>
-
-<tr>
-    <td colspan="4"><strong>FoOlSlide Instances</strong></td>
-</tr>
-<tr>
-    <td>PowerManga</td>
-    <td>https://read.powermanga.org/</td>
-    <td>Chapters, Manga</td>
     <td></td>
 </tr>
 

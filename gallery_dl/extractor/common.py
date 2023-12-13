@@ -78,6 +78,12 @@ class Extractor():
     def config(self, key, default=None):
         return config.interpolate(self._cfgpath, key, default)
 
+    def config2(self, key, key2, default=None, sentinel=util.SENTINEL):
+        value = self.config(key, sentinel)
+        if value is not sentinel:
+            return value
+        return self.config(key2, default)
+
     def config_deprecated(self, key, deprecated, default=None,
                           sentinel=util.SENTINEL, history=set()):
         value = self.config(deprecated, sentinel)
@@ -130,6 +136,18 @@ class Extractor():
             kwargs["timeout"] = self._timeout
         if "verify" not in kwargs:
             kwargs["verify"] = self._verify
+
+        if "json" in kwargs:
+            json = kwargs["json"]
+            if json is not None:
+                kwargs["data"] = util.json_dumps(json).encode()
+                del kwargs["json"]
+                headers = kwargs.get("headers")
+                if headers:
+                    headers["Content-Type"] = "application/json"
+                else:
+                    kwargs["headers"] = {"Content-Type": "application/json"}
+
         response = None
         tries = 1
 
@@ -227,7 +245,7 @@ class Extractor():
         password = None
 
         if username:
-            password = self.config("password")
+            password = self.config("password") or util.LazyPrompt()
         elif self.config("netrc", False):
             try:
                 info = netrc.netrc().authenticators(self.category)
