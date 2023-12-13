@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# Copyright 2023 Mike Fährmann
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
@@ -9,48 +11,63 @@
 from .common import GalleryExtractor, Message
 from .. import text
 
-BASE_PATTERN = r"(?:https?://)?x3vid\.com"
-
 
 class X3vidGalleryExtractor(GalleryExtractor):
-    category = 'x3vid'
-    root = 'https://x3vid.com'
-    directory_fmt = ('{category}', '{title}')
-    pattern = (
-        BASE_PATTERN + r"/(?:gallery|gallery_pics)/(\d+)/([a-zA-Z0-9_#%]+)")
-    example = 'https://x3vid.com/gallery/12345678/album-title-5-pics/'
+    category = "x3vid"
+    root = "https://x3vid.com"
+    directory_fmt = ("{category}", "{title}")
+    pattern = (r"(?:https?://)?x3vid\.com/"
+               r"(?:gallery|gallery_pics)/(\d+)/([a-zA-Z0-9_#?=%]+)")
+    example = "https://x3vid.com/gallery/12345678/album-title-5-pics/"
 
     def __init__(self, match):
         self.gallery_id = match.group(1)
-        self.title = text.unquote(match.group(2))
-        url = '{}/gallery_pics/{}/{}'.format(
+        self.title = match.group(2)
+        url = "{}/gallery_pics/{}/{}".format(
             self.root, self.gallery_id, self.title)
         GalleryExtractor.__init__(self, match, url)
 
-# TODO - MULTIPLE PAGES NOT YET SUPPORTED/WORKING
-    def pagination(self, page):
-        pnum = []
-        pages = text.remove_html(text.extr(
+    @staticmethod
+    def pagination(page):
+        pnums = text.remove_html(text.extr(
             page, '="current">', '<a class="next'))
-        return [i for i in pages if i != ' ']
+        return [i for i in pnums if i != " "]
+
+    def items(self):
+        page = self.request(self.gallery_url).text
+        imgs = self.images(page)
+        data = self.metadata(page)
+
+        for pnum in self.pagination(page):
+            if int(pnum) == 1:
+                continue
+            page = self.request(
+                "{}?page={}&root=1".format(self.gallery_url, pnum)).text
+            images = self.images(page)
+            imgs.extend(images)
+
+        data["count"] = len(imgs)
+
+        yield Message.Directory, data
+        for num, img in enumerate(imgs, start=1):
+            path = text.nameext_from_url(img, {
+                "num": num,
+                "title": data["title"],
+                "gallery_id": self.gallery_id,
+                "count": data["count"]
+            })
+            yield Message.Url, img, path
 
     def images(self, page):
-        url = '{}/images{{}}'.format(self.root).format
-        for x in self.pagination(page):
-            page = self.request('{}?page={}'.format(self.url, x)).text
-            print('{}?page={}'.format(self.url, x))
-            print(x)
-            images = text.extract_iter(page, '"/images', '"')
-            return [
-                (url(i), None)
-                for i in images
-            ]
+        imgs = text.extr(page, 'main-content">', "</body>")
+        return [self.root + i for i in text.extract_iter(
+            imgs, 'src="', '"')]
 
     def metadata(self, page):
         extr = text.extract_from(page)
         return {
-            'pageurl': text.unquote(self.url),
-            'gallery_id': self.gallery_id,
-            'title': self.title,
-            'tags': text.split_html(extr('Category:', '</div>')),
+            "pageurl": text.unquote(self.url),
+            "gallery_id": self.gallery_id,
+            "title": text.unquote(self.title),
+            "tags": text.split_html(extr("Category:", "</div>")),
         }
