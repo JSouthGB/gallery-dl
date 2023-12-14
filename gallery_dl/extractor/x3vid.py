@@ -17,7 +17,7 @@ class X3vidGalleryExtractor(GalleryExtractor):
     root = "https://x3vid.com"
     directory_fmt = ("{category}", "{title}")
     pattern = (r"(?:https?://)?x3vid\.com/"
-               r"(?:gallery|gallery_pics)/(\d+)/([a-zA-Z0-9_#?=%\- ]+)")
+               r"(?:gallery|gallery_pics)/(\d+)/(.+)")
     example = "https://x3vid.com/gallery/12345678/album-title-5-pics/"
 
     def __init__(self, match):
@@ -32,27 +32,31 @@ class X3vidGalleryExtractor(GalleryExtractor):
         pages = text.split_html(text.extr(
             page, 'class="pagination"', "</div>"))
         pnums = [int(i) for i in pages if i.isnumeric()]
-        return max(pnums)
+        if pnums:
+            return max(pnums) + 1
+        return None
 
     def items(self):
         page = self.request(self.gallery_url).text
         imgs = self.images(page)
         data = self.metadata(page)
+        pages = self.pagination(page)
 
-        for pnum in range(2, self.pagination(page) + 1):
-            page = self.request(
-                "{}?page={}&root=1".format(self.gallery_url, pnum)).text
-            images = self.images(page)
-            imgs.extend(images)
+        if pages is not None:
+            for pnum in range(2, pages):
+                page = self.request(
+                    "{}?page={}&root=1".format(self.gallery_url, pnum)).text
+                imgs.extend(self.images(page))
 
         data["count"] = len(imgs)
-
         yield Message.Directory, data
+
         for num, img in enumerate(imgs, start=1):
             path = text.nameext_from_url(img, {
                 "num": num,
-                "title": data["title"],
                 "gallery_id": self.gallery_id,
+                "title": data["title"],
+                "tags": data["tags"],
                 "count": data["count"]
             })
             yield Message.Url, img, path
@@ -65,7 +69,6 @@ class X3vidGalleryExtractor(GalleryExtractor):
     def metadata(self, page):
         extr = text.extract_from(page)
         return {
-            "pageurl": text.unquote(self.url),
             "gallery_id": self.gallery_id,
             "title": text.unquote(self.title),
             "tags": text.split_html(extr("Category:", "</div>")),
