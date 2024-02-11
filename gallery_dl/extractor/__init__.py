@@ -180,6 +180,7 @@ modules = [
     "wikiart",
     "wikifeet",
     "wikimedia",
+    "x3vid",
     "xhamster",
     "xvideos",
     "zerochan",
