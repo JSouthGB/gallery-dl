@@ -51,6 +51,7 @@ modules = [
     "flickr",
     "furaffinity",
     "fuskator",
+    "fusker",
     "gelbooru",
     "gelbooru_v01",
     "gelbooru_v02",
