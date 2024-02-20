@@ -124,7 +124,7 @@ Consider all listed sites to potentially be NSFW.
 <tr>
     <td>Bluesky</td>
     <td>https://bsky.app/</td>
-    <td>Feeds, Followed Users, Likes, Lists, Media Files, Posts, Replies, User Profiles</td>
+    <td>Avatars, Backgrounds, Feeds, Followed Users, Likes, Lists, Media Files, Posts, Replies, Search Results, User Profiles</td>
     <td>Supported</td>
 </tr>
 <tr>
@@ -147,7 +147,7 @@ Consider all listed sites to potentially be NSFW.
 </tr>
 <tr>
     <td>Coomer</td>
-    <td>https://coomer.party/</td>
+    <td>https://coomer.su/</td>
     <td>Favorites, Posts, User Profiles</td>
     <td>Supported</td>
 </tr>
@@ -352,7 +352,7 @@ Consider all listed sites to potentially be NSFW.
 <tr>
     <td>ImageChest</td>
     <td>https://imgchest.com/</td>
-    <td>Galleries</td>
+    <td>Galleries, User Profiles</td>
     <td></td>
 </tr>
 <tr>
@@ -364,7 +364,7 @@ Consider all listed sites to potentially be NSFW.
 <tr>
     <td>Imagetwist</td>
     <td>https://imagetwist.com/</td>
-    <td>individual Images</td>
+    <td>Galleries, individual Images</td>
     <td></td>
 </tr>
 <tr>
@@ -453,7 +453,7 @@ Consider all listed sites to potentially be NSFW.
 </tr>
 <tr>
     <td>Kemono</td>
-    <td>https://kemono.party/</td>
+    <td>https://kemono.su/</td>
     <td>Discord Servers, Favorites, Posts, User Profiles</td>
     <td>Supported</td>
 </tr>
@@ -670,7 +670,7 @@ Consider all listed sites to potentially be NSFW.
 <tr>
     <td>pixivFANBOX</td>
     <td>https://www.fanbox.cc/</td>
-    <td>Creators, Posts</td>
+    <td>Creators, Home Feed, Posts, Pixiv Redirects, Supported User Feed</td>
     <td><a href="https://github.com/mikf/gallery-dl#cookies">Cookies</a></td>
 </tr>
 <tr>
@@ -898,7 +898,7 @@ Consider all listed sites to potentially be NSFW.
 <tr>
     <td>Twitter</td>
     <td>https://twitter.com/</td>
-    <td>Avatars, Backgrounds, Bookmarks, Events, Followed Users, Hashtags, individual Images, Likes, Lists, List Members, Media Timelines, Search Results, Timelines, Tweets, User Profiles</td>
+    <td>Avatars, Backgrounds, Bookmarks, Communities, Events, Followed Users, Hashtags, individual Images, Likes, Lists, List Members, Media Timelines, Search Results, Timelines, Tweets, User Profiles</td>
     <td>Supported</td>
 </tr>
 <tr>
@@ -940,7 +940,7 @@ Consider all listed sites to potentially be NSFW.
 <tr>
     <td>VSCO</td>
     <td>https://vsco.co/</td>
-    <td>Collections, individual Images, User Profiles</td>
+    <td>Collections, individual Images, Spaces, User Profiles</td>
     <td></td>
 </tr>
 <tr>
@@ -1502,6 +1502,18 @@ Consider all listed sites to potentially be NSFW.
 <tr>
     <td>Super Mario Wiki</td>
     <td>https://www.mariowiki.com/</td>
+    <td>Articles</td>
+    <td></td>
+</tr>
+<tr>
+    <td>Bulbapedia</td>
+    <td>https://bulbapedia.bulbagarden.net/</td>
+    <td>Articles</td>
+    <td></td>
+</tr>
+<tr>
+    <td>PidgiWiki</td>
+    <td>https://www.pidgi.net/</td>
     <td>Articles</td>
     <td></td>
 </tr>

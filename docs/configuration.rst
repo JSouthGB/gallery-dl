@@ -1185,6 +1185,63 @@ Description
     Download embedded videos hosted on https://www.blogger.com/
 
 
+extractor.bluesky.include
+-------------------------
+Type
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``"media"``
+Example
+    * ``"avatar,background,posts"``
+    * ``["avatar", "background", "posts"]``
+Description
+    A (comma-separated) list of subcategories to include
+    when processing a user profile.
+
+    Possible values are
+    ``"avatar"``,
+    ``"background"``,
+    ``"posts"``,
+    ``"replies"``,
+    ``"media"``,
+    ``"likes"``,
+
+    It is possible to use ``"all"`` instead of listing all values separately.
+
+
+extractor.bluesky.metadata
+--------------------------
+Type
+    * ``bool``
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``false``
+Example
+    * ``"facets,user"``
+    * ``["facets", "user"]``
+Description
+    Extract additional metadata.
+
+    * ``facets``: ``hashtags``, ``mentions``, and ``uris``
+    * ``user``: detailed ``user`` metadata for the user referenced in the input URL
+      (See `app.bsky.actor.getProfile <https://www.docs.bsky.app/docs/api/app-bsky-actor-get-profile>`__).
+
+
+
+extractor.bluesky.post.depth
+----------------------------
+Type
+    ``integer``
+Default
+    ``0``
+Description
+    Sets the maximum depth of returned reply posts.
+
+    (See `depth` parameter of `app.bsky.feed.getPostThread <https://www.docs.bsky.app/docs/api/app-bsky-feed-get-post-thread>`__)
+
+
 extractor.cyberdrop.domain
 --------------------------
 Type
@@ -1470,12 +1527,33 @@ Description
 extractor.deviantart.metadata
 -----------------------------
 Type
-    ``bool``
+    * ``bool``
+    * ``string``
+    * ``list`` of ``strings``
 Default
     ``false``
+Example
+    * ``"stats,submission"``
+    * ``["camera", "stats", "submission"]``
 Description
-    Request extended metadata for deviation objects to additionally provide
-    ``description``, ``tags``, ``license`` and ``is_watching`` fields.
+    Extract additional metadata for deviation objects.
+
+    Provides
+    ``description``, ``tags``, ``license``, and ``is_watching``
+    fields when enabled.
+
+    It is possible to request extended metadata by specifying a list of
+
+    * ``camera``     : EXIF information (if available)
+    * ``stats``      : deviation statistics
+    * ``submission`` : submission information
+    * ``collection`` : favourited folder information (requires a `refresh token <extractor.deviantart.refresh-token_>`__)
+    * ``gallery``    : gallery folder information (requires a `refresh token <extractor.deviantart.refresh-token_>`__)
+
+    Set this option to ``"all"`` to request all extended metadata categories.
+
+    See `/deviation/metadata <https://www.deviantart.com/developers/http/v1/20210526/deviation_metadata/7824fc14d6fba6acbacca1cf38c24158>`__
+    for official documentation.
 
 
 extractor.deviantart.original
@@ -1522,14 +1600,15 @@ Description
 extractor.deviantart.quality
 ----------------------------
 Type
-    ``integer``
+    * ``integer``
+    * ``string``
 Default
     ``100``
 Description
-    JPEG quality level of newer images for which
+    JPEG quality level of images for which
     an original file download is not available.
 
-    Note: Only has an effect when `deviantart.jwt <extractor.deviantart.jwt_>`__ is disabled.
+    Set this to ``"png"`` to download a PNG version of these images instead.
 
 
 extractor.deviantart.refresh-token
@@ -1582,7 +1661,7 @@ Type
 Default
     ``false``
 Example
-    * ``notes,pools``
+    * ``"notes,pools"``
     * ``["notes", "pools"]``
 Description
     Extract additional metadata (notes, pool metadata) if available.

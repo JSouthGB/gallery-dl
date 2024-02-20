@@ -101,6 +101,7 @@ CATEGORY_MAP = {
     "nsfwalbum"      : "NSFWalbum.com",
     "paheal"         : "rule #34",
     "photovogue"     : "PhotoVogue",
+    "pidgiwiki"      : "PidgiWiki",
     "pixeldrain"     : "pixeldrain",
     "pornimagesxxx"  : "Porn Image",
     "pornpics"       : "PornPics.com",
@@ -153,6 +154,7 @@ SUBCATEGORY_MAP = {
     "art"    : "Art",
     "audio"  : "Audio",
     "doujin" : "Doujin",
+    "home"   : "Home Feed",
     "image"  : "individual Images",
     "index"  : "Site Index",
     "issue"  : "Comic Issues",
@@ -180,6 +182,7 @@ SUBCATEGORY_MAP = {
     "coomerparty": {
         "discord"       : "",
         "discord-server": "",
+        "posts"         : "",
     },
     "desktopography": {
         "site": "",
@@ -191,7 +194,8 @@ SUBCATEGORY_MAP = {
         "watch-posts": "",
     },
     "fanbox": {
-        "redirect": "",
+        "supporting": "Supported User Feed",
+        "redirect"  : "Pixiv Redirects",
     },
     "fapello": {
         "path": "Videos, Trending Posts, Popular Videos, Top Models",
@@ -199,7 +203,6 @@ SUBCATEGORY_MAP = {
     "hatenablog": {
         "archive": "Archive",
         "entry"  : "Individual Posts",
-        "home"   : "Home Feed",
     },
     "hentaifoundry": {
         "story": "",
@@ -216,8 +219,9 @@ SUBCATEGORY_MAP = {
         "tagged": "Tagged Posts",
     },
     "kemonoparty": {
-        "discord": "Discord Servers",
+        "discord"       : "Discord Servers",
         "discord-server": "",
+        "posts"         : "",
     },
     "lensdump": {
         "albums": "",
@@ -254,13 +258,9 @@ SUBCATEGORY_MAP = {
         "gifs": "",
     },
     "raddle": {
-        "home"           : "Home Feed",
         "usersubmissions": "User Profiles",
         "post"           : "Individual Posts",
         "shorturl"       : "",
-    },
-    "reddit": {
-        "home": "Home Feed",
     },
     "redgifs": {
         "collections": "",
@@ -284,10 +284,14 @@ SUBCATEGORY_MAP = {
         "media": "Media Timelines",
         "tweets": "",
         "replies": "",
+        "community": "",
         "list-members": "List Members",
     },
     "vk": {
         "tagged": "Tagged Photos",
+    },
+    "vsco": {
+        "spaces": "",
     },
     "wallhaven": {
         "collections": "",

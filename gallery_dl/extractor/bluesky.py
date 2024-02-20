@@ -29,11 +29,22 @@ class BlueskyExtractor(Extractor):
         self.user = match.group(1)
 
     def _init(self):
+        meta = self.config("metadata") or ()
+        if meta:
+            if isinstance(meta, str):
+                meta = meta.replace(" ", "").split(",")
+            elif not isinstance(meta, (list, tuple)):
+                meta = ("user", "facets")
+        self._metadata_user = ("user" in meta)
+        self._metadata_facets = ("facets" in meta)
+
         self.api = BlueskyAPI(self)
+        self._user = None
 
     def items(self):
         for post in self.posts():
-            post = post["post"]
+            if "post" in post:
+                post = post["post"]
             post.update(post["record"])
             del post["record"]
 
@@ -45,20 +56,24 @@ class BlueskyExtractor(Extractor):
                 if "images" in media:
                     images = media["images"]
 
-            if "facets" in post:
-                post["hashtags"] = tags = []
-                post["mentions"] = dids = []
-                post["uris"] = uris = []
-                for facet in post["facets"]:
-                    features = facet["features"][0]
-                    if "tag" in features:
-                        tags.append(features["tag"])
-                    elif "did" in features:
-                        dids.append(features["did"])
-                    elif "uri" in features:
-                        uris.append(features["uri"])
-            else:
-                post["hashtags"] = post["mentions"] = post["uris"] = ()
+            if self._metadata_facets:
+                if "facets" in post:
+                    post["hashtags"] = tags = []
+                    post["mentions"] = dids = []
+                    post["uris"] = uris = []
+                    for facet in post["facets"]:
+                        features = facet["features"][0]
+                        if "tag" in features:
+                            tags.append(features["tag"])
+                        elif "did" in features:
+                            dids.append(features["did"])
+                        elif "uri" in features:
+                            uris.append(features["uri"])
+                else:
+                    post["hashtags"] = post["mentions"] = post["uris"] = ()
+
+            if self._metadata_user:
+                post["user"] = self._user or post["author"]
 
             post["post_id"] = post["uri"].rpartition("/")[2]
             post["count"] = len(images)
@@ -94,6 +109,36 @@ class BlueskyExtractor(Extractor):
     def posts(self):
         return ()
 
+    def _make_post(self, actor, kind):
+        did = self.api._did_from_actor(actor)
+        profile = self.api.get_profile(did)
+
+        if kind not in profile:
+            return ()
+        cid = profile[kind].rpartition("/")[2].partition("@")[0]
+
+        return ({
+            "post": {
+                "embed": {"images": [{
+                    "alt": kind,
+                    "image": {
+                        "$type"   : "blob",
+                        "ref"     : {"$link": cid},
+                        "mimeType": "image/jpeg",
+                        "size"    : 0,
+                    },
+                    "aspectRatio": {
+                        "width" : 1000,
+                        "height": 1000,
+                    },
+                }]},
+                "author"   : profile,
+                "record"   : (),
+                "createdAt": "",
+                "uri"      : cid,
+            },
+        },)
+
 
 class BlueskyUserExtractor(BlueskyExtractor):
     subcategory = "user"
@@ -106,10 +151,12 @@ class BlueskyUserExtractor(BlueskyExtractor):
     def items(self):
         base = "{}/profile/{}/".format(self.root, self.user)
         return self._dispatch_extractors((
-            (BlueskyPostsExtractor  , base + "posts"),
-            (BlueskyRepliesExtractor, base + "replies"),
-            (BlueskyMediaExtractor  , base + "media"),
-            (BlueskyLikesExtractor  , base + "likes"),
+            (BlueskyAvatarExtractor    , base + "avatar"),
+            (BlueskyBackgroundExtractor, base + "banner"),
+            (BlueskyPostsExtractor     , base + "posts"),
+            (BlueskyRepliesExtractor   , base + "replies"),
+            (BlueskyMediaExtractor     , base + "media"),
+            (BlueskyLikesExtractor     , base + "likes"),
         ), ("media",))
 
 
@@ -199,6 +246,35 @@ class BlueskyPostExtractor(BlueskyExtractor):
         return self.api.get_post_thread(self.user, self.post_id)
 
 
+class BlueskyAvatarExtractor(BlueskyExtractor):
+    subcategory = "avatar"
+    filename_fmt = "avatar_{post_id}.{extension}"
+    pattern = USER_PATTERN + r"/avatar"
+    example = "https://bsky.app/profile/HANDLE/avatar"
+
+    def posts(self):
+        return self._make_post(self.user, "avatar")
+
+
+class BlueskyBackgroundExtractor(BlueskyExtractor):
+    subcategory = "background"
+    filename_fmt = "background_{post_id}.{extension}"
+    pattern = USER_PATTERN + r"/ba(?:nner|ckground)"
+    example = "https://bsky.app/profile/HANDLE/banner"
+
+    def posts(self):
+        return self._make_post(self.user, "banner")
+
+
+class BlueskySearchExtractor(BlueskyExtractor):
+    subcategory = "search"
+    pattern = BASE_PATTERN + r"/search(?:/|\?q=)(.+)"
+    example = "https://bsky.app/search?q=QUERY"
+
+    def posts(self):
+        return self.api.search_posts(self.user)
+
+
 class BlueskyAPI():
     """Interface for the Bluesky API
 
@@ -206,9 +282,9 @@ class BlueskyAPI():
     """
 
     def __init__(self, extractor):
-        self.headers = {}
         self.extractor = extractor
         self.log = extractor.log
+        self.headers = {"Accept": "application/json"}
 
         self.username, self.password = extractor._get_auth_info()
         if self.username:
@@ -265,12 +341,27 @@ class BlueskyAPI():
         params = {
             "uri": "at://{}/app.bsky.feed.post/{}".format(
                 self._did_from_actor(actor), post_id),
+            "depth"       : self.extractor.config("depth", "0"),
+            "parentHeight": "0",
         }
-        return (self._call(endpoint, params)["thread"],)
 
-    def get_profile(self, actor):
+        thread = self._call(endpoint, params)["thread"]
+        if "replies" not in thread:
+            return (thread,)
+
+        index = 0
+        posts = [thread]
+        while index < len(posts):
+            post = posts[index]
+            if "replies" in post:
+                posts.extend(post["replies"])
+            index += 1
+        return posts
+
+    @memcache(keyarg=1)
+    def get_profile(self, did):
         endpoint = "app.bsky.actor.getProfile"
-        params = {"actor": self._did_from_actor(actor)}
+        params = {"actor": did}
         return self._call(endpoint, params)
 
     @memcache(keyarg=1)
@@ -279,10 +370,24 @@ class BlueskyAPI():
         params = {"handle": handle}
         return self._call(endpoint, params)["did"]
 
+    def search_posts(self, query):
+        endpoint = "app.bsky.feed.searchPosts"
+        params = {
+            "q"    : query,
+            "limit": "100",
+        }
+        return self._pagination(endpoint, params, "posts")
+
     def _did_from_actor(self, actor):
         if actor.startswith("did:"):
-            return actor
-        return self.resolve_handle(actor)
+            did = actor
+        else:
+            did = self.resolve_handle(actor)
+
+        if self.extractor._metadata_user:
+            self.extractor._user = self.get_profile(did)
+
+        return did
 
     def authenticate(self):
         self.headers["Authorization"] = self._authenticate_impl(self.username)

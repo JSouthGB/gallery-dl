@@ -39,6 +39,25 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://vsco.co/spaces/6320a3e1e0338d1350b33fea",
+    "#category": ("", "vsco", "space"),
+    "#class"   : vsco.VscoSpaceExtractor,
+    "#pattern" : r"https://image(-aws.+)?\.vsco\.co/[0-9a-f/]+/[\w\s-]+\.\w+",
+    "#count"   : range(100, 150),
+},
+
+{
+    "#url"     : "https://vsco.co/vscotest39/spaces",
+    "#category": ("", "vsco", "spaces"),
+    "#class"   : vsco.VscoSpacesExtractor,
+    "#urls"    : (
+        "https://vsco.co/spaces/62991a535a9ee215340fa2b0",
+        "https://vsco.co/spaces/62b35bfb54f97cbfbd5c1e62",
+        "https://vsco.co/spaces/629674a6875ebddb8f1320c1",
+    ),
+},
+
+{
     "#url"     : "https://vsco.co/erenyildiz/media/5d34b93ef632433030707ce2",
     "#category": ("", "vsco", "image"),
     "#class"   : vsco.VscoImageExtractor,
