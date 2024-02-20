@@ -8,8 +8,9 @@
 
 """Extractors for https://homepornbay.com/"""
 
-from .common import GalleryExtractor, Message
+from .common import GalleryExtractor, Message, Extractor
 from .. import text
+from datetime import datetime, timedelta
 
 
 class HomepornbayGalleryExtractor(GalleryExtractor):
@@ -54,7 +55,17 @@ class HomepornbayGalleryExtractor(GalleryExtractor):
         return {
             "gallery_title": self.gallery_title,
             "title"        : extr("<title>", " - "),
-            "date"         : text.parse_datetime(
-                extr("<span>Added: ", "</span>"), "%B %d, %Y"),
+            # "date"         : text.parse_datetime(
+            #     extr("<span>Added: ", "</span>"), "%B %d, %Y"),
+            "date"         : self.rel_date(extr("<span>Added: ", "</span>")),
             "count"        : text.remove_html(extr("Pics:", "</strong>")),
         }
+
+    @staticmethod
+    def rel_date(date):
+        if date == "yesterday":
+            real_date = datetime.now() - timedelta(days=1)
+            return real_date.strftime("%Y-%m-%d")
+        else:
+            return text.parse_datetime(date, "%B %d, %Y")
+
