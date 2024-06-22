@@ -39,12 +39,19 @@ class BlueskyExtractor(Extractor):
         self._metadata_facets = ("facets" in meta)
 
         self.api = BlueskyAPI(self)
-        self._user = None
+        self._user = self._user_did = None
+        self.instance = self.root.partition("://")[2]
 
     def items(self):
         for post in self.posts():
             if "post" in post:
                 post = post["post"]
+
+            pid = post["uri"].rpartition("/")[2]
+            if self._user_did and post["author"]["did"] != self._user_did:
+                self.log.debug("Skipping %s (repost)", pid)
+                continue
+
             post.update(post["record"])
             del post["record"]
 
@@ -75,7 +82,8 @@ class BlueskyExtractor(Extractor):
             if self._metadata_user:
                 post["user"] = self._user or post["author"]
 
-            post["post_id"] = post["uri"].rpartition("/")[2]
+            post["instance"] = self.instance
+            post["post_id"] = pid
             post["count"] = len(images)
             post["date"] = text.parse_datetime(
                 post["createdAt"][:19], "%Y-%m-%dT%H:%M:%S")
@@ -101,10 +109,14 @@ class BlueskyExtractor(Extractor):
                     post["width"] = post["height"] = 0
 
                 image = file["image"]
-                post["filename"] = link = image["ref"]["$link"]
+                try:
+                    cid = image["ref"]["$link"]
+                except KeyError:
+                    cid = image["cid"]
+                post["filename"] = cid
                 post["extension"] = image["mimeType"].rpartition("/")[2]
 
-                yield Message.Url, base + link, post
+                yield Message.Url, base + cid, post
 
     def posts(self):
         return ()
@@ -230,6 +242,7 @@ class BlueskyFollowingExtractor(BlueskyExtractor):
     def items(self):
         for user in self.api.get_follows(self.user):
             url = "https://bsky.app/profile/" + user["did"]
+            user["_extractor"] = BlueskyUserExtractor
             yield Message.Queue, url, user
 
 
@@ -304,7 +317,7 @@ class BlueskyAPI():
     def get_author_feed(self, actor, filter="posts_and_author_threads"):
         endpoint = "app.bsky.feed.getAuthorFeed"
         params = {
-            "actor" : self._did_from_actor(actor),
+            "actor" : self._did_from_actor(actor, True),
             "filter": filter,
             "limit" : "100",
         }
@@ -378,14 +391,17 @@ class BlueskyAPI():
         }
         return self._pagination(endpoint, params, "posts")
 
-    def _did_from_actor(self, actor):
+    def _did_from_actor(self, actor, user_did=False):
         if actor.startswith("did:"):
             did = actor
         else:
             did = self.resolve_handle(actor)
 
-        if self.extractor._metadata_user:
-            self.extractor._user = self.get_profile(did)
+        extr = self.extractor
+        if user_did and not extr.config("reposts", False):
+            extr._user_did = did
+        if extr._metadata_user:
+            extr._user = self.get_profile(did)
 
         return did
 
@@ -434,13 +450,20 @@ class BlueskyAPI():
             if response.status_code < 400:
                 return response.json()
             if response.status_code == 429:
-                self.extractor.wait(seconds=60)
+                until = response.headers.get("RateLimit-Reset")
+                self.extractor.wait(until=until)
                 continue
 
+            try:
+                data = response.json()
+                msg = "API request failed ('{}: {}')".format(
+                    data["error"], data["message"])
+            except Exception:
+                msg = "API request failed ({} {})".format(
+                    response.status_code, response.reason)
+
             self.extractor.log.debug("Server response: %s", response.text)
-            raise exception.StopExtraction(
-                "API request failed (%s %s)",
-                response.status_code, response.reason)
+            raise exception.StopExtraction(msg)
 
     def _pagination(self, endpoint, params, key="feed"):
         while True:

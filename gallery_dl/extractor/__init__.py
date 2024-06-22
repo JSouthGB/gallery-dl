@@ -62,6 +62,7 @@ modules = [
     "hentaifox",
     "hentaihand",
     "hentaihere",
+    "hentainexus",
     "hiperdex",
     "hitomi",
     "homepornbay",
@@ -114,7 +115,6 @@ modules = [
     "paheal",
     "patreon",
     "philomena",
-    "photobucket",
     "photovogue",
     "picarto",
     "piczel",
@@ -196,7 +196,6 @@ modules = [
     "directlink",
     "recursive",
     "oauth",
-    "test",
     "ytdl",
     "generic",
 ]

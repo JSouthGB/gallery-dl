@@ -76,6 +76,7 @@ __tests__ = (
     "#class"   : bluesky.BlueskyFeedExtractor,
     "#range"   : "1-40",
     "#count"   : 40,
+    "#archive" : False,
 },
 
 {
@@ -133,6 +134,7 @@ __tests__ = (
     "filename"   : "bafkreidypzoaybmfj5h7pnpiyct6ng5yae6ydp4czrm72ocg7ev6vbirri",
     "height"     : 630,
     "indexedAt"  : "2023-12-22T18:58:32.715Z",
+    "instance"   : "bsky.app",
     "labels"     : [],
     "likeCount"  : int,
     "num"        : 1,
@@ -153,7 +155,7 @@ __tests__ = (
         "followersCount": int,
         "followsCount"  : int,
         "handle"        : "bsky.app",
-        "indexedAt"     : "2023-12-22T18:54:12.339Z",
+        "indexedAt"     : "2024-01-20T05:04:41.904Z",
         "labels"        : [],
         "postsCount"    : int,
     },
@@ -200,6 +202,14 @@ __tests__ = (
     "repostCount": int,
     "text"       : "testing \"facets\"\n\nsource: seiga.nicovideo.jp/seiga/im5977...\n#patchouli #patchy\n@mikf.bsky.social",
     "uri"        : "at://did:plc:cslxjqkeexku6elp5xowxkq7/app.bsky.feed.post/3kkzc3xaf5m2w",
+},
+
+{
+    "#url"     : "https://bsky.app/profile/go-guiltism.bsky.social/post/3klgth6lilt2l",
+    "#comment" : "different embed CID path",
+    "#category": ("", "bluesky", "post"),
+    "#class"   : bluesky.BlueskyPostExtractor,
+    "#urls"    : "https://bsky.social/xrpc/com.atproto.sync.getBlob?did=did:plc:owc2r2dsewj3hk73rtd746zh&cid=bafkreieuhplc7fpbvi3suvacaf2dqxzvuu4hgl5o6eifqb76tf3uopldmi",
 },
 
 )
