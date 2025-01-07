@@ -18,20 +18,38 @@ class PictoaGalleryExtractor(GalleryExtractor):
     directory_fmt = ("{category}", "{gallery_id}_{title}")
     archive_fmt = "{category}_{gallery_id}_{filename}"
     pattern = r"(?:https://www)?\.pictoa\.com/(albums)/(.+)\.html"
-    example = "https://www.pictoa.com.albums/an-album-name-123-1234567.html"
+    example = "https://www.pictoa.com/albums/an-album-name-123-1234567.html"
 
     def __init__(self, match):
         self.slug = match.group(2)
         url = "{}/albums/{}.html".format(self.root, self.slug)
         GalleryExtractor.__init__(self, match, url)
 
-    def items(self):
+    @staticmethod
+    def _pagination(page):
+        pages = text.split_html(text.extr(
+            page, '"pagination"', '</ul>'
+        ))
+        pnums = [int(i) for i in pages if i.isnumeric()]
+        if pnums:
+            return max(pnums) + 1
+        return None
 
+    def items(self):
         page = self.request(self.gallery_url).text
         imgs = self.images(page)
         data = self.metadata(page)
-        data["count"] = len(imgs)
+        pages = self._pagination(page)
 
+        stripped_url = self.gallery_url.split('.html')[0]
+
+        if pages is not None:
+            for pnum in range(2, pages):
+                page = self.request(
+                    "{}-p{}.html".format(stripped_url, pnum)).text
+                imgs.extend(self.images(page))
+
+        data["count"] = len(imgs)
         yield Message.Directory, data
 
         for num, img in enumerate(imgs, start=1):
@@ -46,9 +64,24 @@ class PictoaGalleryExtractor(GalleryExtractor):
     def images(self, page):
         imgs = text.extr(page, '<h1>', "flagMenuFirst")
         img_list = text.extract_iter(imgs, 'data-lazy-src="', '"')
-        return [i.replace("t1", "s1") for i in img_list]
-        # return [i for i in text.extract_iter(
-        #     imgs, 'lazy-src="', '"')]
+
+        cdn_prefixes = ['s1', 's2']
+        valid_urls = []
+
+        for img_url in img_list:
+            for prefix in cdn_prefixes:
+                full_url = img_url.replace("t1", prefix)
+                try:
+                    response = self.request(
+                        full_url, method='HEAD', allow_redirects=False
+                    )
+                    if response.status_code == 200:
+                        valid_urls.append(full_url)
+                        break
+                except Exception:
+                    continue
+
+        return valid_urls
 
     def metadata(self, page):
         title, gallery_id = self.get_gallery_title()
