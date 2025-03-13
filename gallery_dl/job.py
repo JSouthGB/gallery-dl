@@ -33,6 +33,7 @@ stdout_write = output.stdout_write
 class Job():
     """Base class for Job types"""
     ulog = None
+    _logger_adapter = output.LoggerAdapter
 
     def __init__(self, extr, parent=None):
         if isinstance(extr, str):
@@ -58,6 +59,7 @@ class Job():
                 for category in parents:
                     cat = "{}>{}".format(category, extr.category)
                     cfgpath.append((cat, extr.subcategory))
+                    cfgpath.append((category + ">*", extr.subcategory))
                 cfgpath.append((extr.category, extr.subcategory))
                 self.parents = parents
             else:
@@ -77,9 +79,9 @@ class Job():
 
         actions = extr.config("actions")
         if actions:
-            from .actions import parse
+            from .actions import LoggerAdapter, parse
+            self._logger_adapter = LoggerAdapter
             self._logger_actions = parse(actions)
-            self._wrap_logger = self._wrap_logger_actions
 
         path_proxy = output.PathfmtProxy(self)
         self._logger_extra = {
@@ -157,11 +159,12 @@ class Job():
             raise
         except exception.GalleryDLException as exc:
             log.error("%s: %s", exc.__class__.__name__, exc)
+            log.debug("", exc_info=exc)
             self.status |= exc.code
         except OSError as exc:
             log.error("Unable to download data:  %s: %s",
                       exc.__class__.__name__, exc)
-            log.debug("", exc_info=True)
+            log.debug("", exc_info=exc)
             self.status |= 128
         except Exception as exc:
             log.error(("An unexpected error occurred: %s - %s. "
@@ -169,7 +172,7 @@ class Job():
                        "copy its output and report this issue on "
                        "https://github.com/mikf/gallery-dl/issues ."),
                       exc.__class__.__name__, exc)
-            log.debug("", exc_info=True)
+            log.debug("", exc_info=exc)
             self.status |= 1
         except BaseException:
             self.status |= 1
@@ -267,10 +270,7 @@ class Job():
         return self._wrap_logger(logging.getLogger(name))
 
     def _wrap_logger(self, logger):
-        return output.LoggerAdapter(logger, self)
-
-    def _wrap_logger_actions(self, logger):
-        return output.LoggerAdapterActions(logger, self)
+        return self._logger_adapter(logger, self)
 
     def _write_unsupported(self, url):
         if self.ulog:
@@ -315,7 +315,7 @@ class DownloadJob(Job):
             pathfmt.build_path()
 
             if pathfmt.exists():
-                if archive:
+                if archive and self._archive_write_skip:
                     archive.add(kwdict)
                 self.handle_skip()
                 return
@@ -323,6 +323,12 @@ class DownloadJob(Job):
         if "prepare-after" in hooks:
             for callback in hooks["prepare-after"]:
                 callback(pathfmt)
+
+            if kwdict.pop("_file_recheck", False) and pathfmt.exists():
+                if archive and self._archive_write_skip:
+                    archive.add(kwdict)
+                self.handle_skip()
+                return
 
         if self.sleep:
             self.extractor.sleep(self.sleep(), "download")
@@ -342,10 +348,13 @@ class DownloadJob(Job):
                 self.status |= 4
                 self.log.error("Failed to download %s",
                                pathfmt.filename or url)
+                if "error" in hooks:
+                    for callback in hooks["error"]:
+                        callback(pathfmt)
                 return
 
         if not pathfmt.temppath:
-            if archive:
+            if archive and self._archive_write_skip:
                 archive.add(kwdict)
             self.handle_skip()
             return
@@ -359,7 +368,7 @@ class DownloadJob(Job):
         pathfmt.finalize()
         self.out.success(pathfmt.path)
         self._skipcnt = 0
-        if archive:
+        if archive and self._archive_write_file:
             archive.add(kwdict)
         if "after" in hooks:
             for callback in hooks["after"]:
@@ -428,7 +437,8 @@ class DownloadJob(Job):
 
                     if status:
                         self.status |= status
-                        if "_fallback" in kwdict and self.fallback:
+                        if (status & 95 and   # not FormatError or OSError
+                                "_fallback" in kwdict and self.fallback):
                             fallback = kwdict["_fallback"] = \
                                 iter(kwdict["_fallback"])
                             try:
@@ -476,10 +486,11 @@ class DownloadJob(Job):
 
     def handle_skip(self):
         pathfmt = self.pathfmt
-        self.out.skip(pathfmt.path)
         if "skip" in self.hooks:
             for callback in self.hooks["skip"]:
                 callback(pathfmt)
+        self.out.skip(pathfmt.path)
+
         if self._skipexc:
             if not self._skipftr or self._skipftr(pathfmt.kwdict):
                 self._skipcnt += 1
@@ -540,26 +551,41 @@ class DownloadJob(Job):
 
         archive_path = cfg("archive")
         if archive_path:
-            archive_path = util.expand_path(archive_path)
-            archive_format = (cfg("archive-prefix", extr.category) +
-                              cfg("archive-format", extr.archive_fmt))
-            archive_pragma = (cfg("archive-pragma"))
+            archive_table = cfg("archive-table")
+            archive_prefix = cfg("archive-prefix")
+            if archive_prefix is None:
+                archive_prefix = extr.category if archive_table is None else ""
+
+            archive_format = cfg("archive-format")
+            if archive_format is None:
+                archive_format = extr.archive_fmt
+
             try:
-                if "{" in archive_path:
-                    archive_path = formatter.parse(
-                        archive_path).format_map(kwdict)
-                if cfg("archive-mode") == "memory":
-                    archive_cls = archive.DownloadArchiveMemory
-                else:
-                    archive_cls = archive.DownloadArchive
-                self.archive = archive_cls(
-                    archive_path, archive_format, archive_pragma)
+                self.archive = archive.connect(
+                    archive_path,
+                    archive_prefix,
+                    archive_format,
+                    archive_table,
+                    cfg("archive-mode"),
+                    cfg("archive-pragma"),
+                    kwdict,
+                )
             except Exception as exc:
                 extr.log.warning(
                     "Failed to open download archive at '%s' (%s: %s)",
                     archive_path, exc.__class__.__name__, exc)
             else:
                 extr.log.debug("Using download archive '%s'", archive_path)
+
+                events = cfg("archive-event")
+                if events is None:
+                    self._archive_write_file = True
+                    self._archive_write_skip = False
+                else:
+                    if isinstance(events, str):
+                        events = events.split(",")
+                    self._archive_write_file = ("file" in events)
+                    self._archive_write_skip = ("skip" in events)
 
         skip = cfg("skip", True)
         if skip:
@@ -578,7 +604,7 @@ class DownloadJob(Job):
 
                 skip_filter = cfg("skip-filter")
                 if skip_filter:
-                    self._skipftr = util.compile_expression(skip_filter)
+                    self._skipftr = util.compile_filter(skip_filter)
                 else:
                     self._skipftr = None
         else:
@@ -602,6 +628,14 @@ class DownloadJob(Job):
             for pp_dict in postprocessors:
                 if isinstance(pp_dict, str):
                     pp_dict = pp_conf.get(pp_dict) or {"name": pp_dict}
+                elif "type" in pp_dict:
+                    pp_type = pp_dict["type"]
+                    if pp_type in pp_conf:
+                        pp = pp_conf[pp_type].copy()
+                        pp.update(pp_dict)
+                        pp_dict = pp
+                    if "name" not in pp_dict:
+                        pp_dict["name"] = pp_type
                 if pp_opts:
                     pp_dict = pp_dict.copy()
                     pp_dict.update(pp_opts)
@@ -626,7 +660,7 @@ class DownloadJob(Job):
                 except Exception as exc:
                     pp_log.error("'%s' initialization failed:  %s: %s",
                                  name, exc.__class__.__name__, exc)
-                    pp_log.debug("", exc_info=True)
+                    pp_log.debug("", exc_info=exc)
                 else:
                     pp_list.append(pp_obj)
 
@@ -640,7 +674,7 @@ class DownloadJob(Job):
         expr = options.get("filter") if options else None
 
         if expr:
-            condition = util.compile_expression(expr)
+            condition = util.compile_filter(expr)
             for hook, callback in hooks.items():
                 self.hooks[hook].append(functools.partial(
                     self._call_hook, callback, condition))
@@ -676,7 +710,7 @@ class SimulationJob(DownloadJob):
             kwdict["extension"] = "jpg"
         if self.sleep:
             self.extractor.sleep(self.sleep(), "download")
-        if self.archive:
+        if self.archive and self._archive_write_skip:
             self.archive.add(kwdict)
         self.out.skip(self.pathfmt.build_filename(kwdict))
 
@@ -848,15 +882,21 @@ class InfoJob(Job):
 
 class DataJob(Job):
     """Collect extractor results and dump them"""
+    resolve = False
 
-    def __init__(self, url, parent=None, file=sys.stdout, ensure_ascii=True):
+    def __init__(self, url, parent=None, file=sys.stdout, ensure_ascii=True,
+                 resolve=False):
         Job.__init__(self, url, parent)
         self.file = file
         self.data = []
         self.ascii = config.get(("output",), "ascii", ensure_ascii)
+        self.resolve = 128 if resolve is True else (resolve or self.resolve)
 
         private = config.get(("output",), "private")
         self.filter = dict.copy if private else util.filter_dict
+
+        if self.resolve > 0:
+            self.handle_queue = self.handle_queue_resolve
 
     def run(self):
         self._init()
@@ -883,12 +923,13 @@ class DataJob(Job):
             for msg in self.data:
                 util.transform_dict(msg[-1], util.number_to_string)
 
-        # dump to 'file'
-        try:
-            util.dump_json(self.data, self.file, self.ascii, 2)
-            self.file.flush()
-        except Exception:
-            pass
+        if self.file:
+            # dump to 'file'
+            try:
+                util.dump_json(self.data, self.file, self.ascii, 2)
+                self.file.flush()
+            except Exception:
+                pass
 
         return 0
 
@@ -900,3 +941,17 @@ class DataJob(Job):
 
     def handle_queue(self, url, kwdict):
         self.data.append((Message.Queue, url, self.filter(kwdict)))
+
+    def handle_queue_resolve(self, url, kwdict):
+        cls = kwdict.get("_extractor")
+        if cls:
+            extr = cls.from_url(url)
+        else:
+            extr = extractor.find(url)
+
+        if not extr:
+            return self.data.append((Message.Queue, url, self.filter(kwdict)))
+
+        job = self.__class__(extr, self, None, self.ascii, self.resolve-1)
+        job.data = self.data
+        job.run()

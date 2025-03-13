@@ -14,8 +14,16 @@ __tests__ = (
     "#category": ("", "twitter", "user"),
     "#class"   : twitter.TwitterUserExtractor,
     "#options" : {"include": "all"},
-    "#pattern" : r"https://x\.com/supernaturepics/(photo|header_photo|timeline|tweets|media|with_replies|likes)$",
-    "#count"   : 7,
+    "#urls"    : [
+        "https://x.com/supernaturepics/info",
+        "https://x.com/supernaturepics/photo",
+        "https://x.com/supernaturepics/header_photo",
+        "https://x.com/supernaturepics/timeline",
+        "https://x.com/supernaturepics/tweets",
+        "https://x.com/supernaturepics/media",
+        "https://x.com/supernaturepics/with_replies",
+        "https://x.com/supernaturepics/likes",
+    ],
 },
 
 {
@@ -319,6 +327,8 @@ __tests__ = (
     "#category": ("", "twitter", "tweet"),
     "#class"   : twitter.TwitterTweetExtractor,
     "#sha1_url": "3a2a43dc5fb79dd5432c701d8e55e87c4e551f47",
+
+    "type": "photo",
 },
 
 {
@@ -327,6 +337,8 @@ __tests__ = (
     "#category": ("", "twitter", "tweet"),
     "#class"   : twitter.TwitterTweetExtractor,
     "#pattern" : r"https://video.twimg.com/ext_tw_video/.+\.mp4\?tag=5",
+
+    "type": "video",
 },
 
 {
@@ -587,6 +599,7 @@ You’ll be able to receive four Galarian form Pokémon with Hidden Abilities, p
     "#class"   : twitter.TwitterTweetExtractor,
 
     "description": "oc",
+    "type"       : "photo",
 },
 
 {
@@ -615,7 +628,7 @@ The Washington Post writes, "Three weeks after the toxic train derailment in Ohi
     "#comment" : "'birdwatch' note (#5317)",
     "#category": ("", "twitter", "tweet"),
     "#class"   : twitter.TwitterTweetExtractor,
-    "#options"  : {"text-tweets": True},
+    "#options" : {"text-tweets": True},
 
     "birdwatch": "In addition to the known harm of lead exposure, especially to children, Mr. Kobach is incorrect when he states the mandate is unfunded. In fact, the BIPARTISAN Infrastructure Law Joe Biden signed into law in Nov 2021 provides $15B toward lead service line replacement projects. epa.gov/ground-water-a…",
     "content"  : "Biden wants to replace lead pipes. He failed to mention that the unfunded mandate sets an almost impossible timeline, will cost billions, infringe on the rights of the States and their residents – all for benefits that may be entirely speculative. #sotu https://ag.ks.gov/media-center/news-releases/2024/02/09/kobach-leads-coalition-demanding-biden-drop-unnecessary-epa-rule",
@@ -630,11 +643,26 @@ The Washington Post writes, "Three weeks after the toxic train derailment in Ohi
 },
 
 {
+    "#url"     : "https://x.com/fw_rion_/status/1866737025824829544",
+    "#comment" : "grok share (#7040)",
+    "#category": ("", "twitter", "tweet"),
+    "#class"   : twitter.TwitterTweetExtractor,
+    "#options" : {"cards": True},
+    "#urls"    : "https://pbs.twimg.com/grok-img-share/1866736156786008064.jpg",
+},
+
+{
     "#url"     : "https://twitter.com/playpokemon/status/1263832915173048321/quotes",
     "#category": ("", "twitter", "quotes"),
     "#class"   : twitter.TwitterQuotesExtractor,
     "#pattern" : twitter.TwitterSearchExtractor.pattern,
     "#urls"    : "https://x.com/search?q=quoted_tweet_id:1263832915173048321",
+},
+
+{
+    "#url"     : "https://twitter.com/supernaturepics/info",
+    "#category": ("", "twitter", "info"),
+    "#class"   : twitter.TwitterInfoExtractor,
 },
 
 {
