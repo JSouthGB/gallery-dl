@@ -224,6 +224,7 @@ modules = [
     "oauth",
     "noop",
     "ytdl",
+    "zbporn",
     "generic",
 ]
 
