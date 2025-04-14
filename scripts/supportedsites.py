@@ -62,6 +62,7 @@ CATEGORY_MAP = {
     "hbrowse"        : "HBrowse",
     "hentai2read"    : "Hentai2Read",
     "hentaicosplay"  : "Hentai Cosplay",
+    "hentaienvy"     : "HentaiEnvy",
     "hentaiera"      : "HentaiEra",
     "hentaifoundry"  : "Hentai Foundry",
     "hentaifox"      : "HentaiFox",
@@ -70,6 +71,7 @@ CATEGORY_MAP = {
     "hentaiimg"      : "Hentai Image",
     "hentainexus"    : "HentaiNexus",
     "hentairox"      : "HentaiRox",
+    "hentaizap"      : "HentaiZap",
     "hiperdex"       : "HiperDEX",
     "hitomi"         : "Hitomi.la",
     "horne"          : "horne",
@@ -77,6 +79,7 @@ CATEGORY_MAP = {
     "illusioncardsbooru": "Illusion Game Cards",
     "imagebam"       : "ImageBam",
     "imagefap"       : "ImageFap",
+    "imagepond"      : "ImagePond",
     "imgbb"          : "ImgBB",
     "imgbox"         : "imgbox",
     "imagechest"     : "ImageChest",
@@ -202,6 +205,9 @@ SUBCATEGORY_MAP = {
         "user-series"  : "",
         "user-bookmark": "Bookmarks",
     },
+    "arcalive": {
+        "user": "User Posts",
+    },
     "artstation": {
         "artwork": "Artwork Listings",
         "collections": "",
@@ -232,6 +238,7 @@ SUBCATEGORY_MAP = {
     },
     "Danbooru": {
         "artist-search": "Artist Searches",
+        "favgroup": "Favorite Groups",
     },
     "desktopography": {
         "site": "",
