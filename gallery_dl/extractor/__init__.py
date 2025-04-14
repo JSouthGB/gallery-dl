@@ -28,6 +28,7 @@ modules = [
     "artstation",
     "aryion",
     "batoto",
+    "babesource",
     "bbc",
     "behance",
     "bilibili",
